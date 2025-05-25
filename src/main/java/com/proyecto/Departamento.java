@@ -6,6 +6,7 @@ public class Departamento {
     private String nombre;
     private List<Tecnico> tecnicos;
 
+
     public Departamento(String nombre) {
         if (nombre == null || nombre.isEmpty())
             throw new IllegalArgumentException("Nombre de departamento incorrecto");
@@ -24,4 +25,5 @@ public class Departamento {
     public String getNombre() {
         return nombre;
     }
+
 }

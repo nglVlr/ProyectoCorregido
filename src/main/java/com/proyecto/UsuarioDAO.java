@@ -138,4 +138,35 @@ public class UsuarioDAO {
             throw new SQLException("Rol no encontrado: " + nombreRol);
         }
     }
+    public void actualizarUsuario(Usuario usuario) throws SQLException {
+
+        int rolId = obtenerRolId(usuario.getRol().getNombre());
+        if (rolId == 0) {
+            throw new SQLException("Rol no encontrado: " + usuario.getRol().getNombre());
+        }
+
+        String sql;
+        boolean esTecnico = usuario instanceof Tecnico;
+
+        if (esTecnico) {
+            sql = "UPDATE usuarios SET nombre = ?, correo = ?, rol_id = ?, departamento = ? WHERE id = ?";
+        } else {
+            sql = "UPDATE usuarios SET nombre = ?, correo = ?, rol_id = ? WHERE id = ?";
+        }
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, usuario.getNombre());
+            stmt.setString(2, usuario.getCorreo());
+            stmt.setInt(3, rolId);
+
+            if (esTecnico) {
+                stmt.setString(4, ((Tecnico) usuario).getDepartamento());
+                stmt.setInt(5, usuario.getId());
+            } else {
+                stmt.setInt(4, usuario.getId());
+            }
+
+            stmt.executeUpdate();
+        }
+    }
 }

@@ -55,13 +55,12 @@ public class Ticket implements Serializable {
         return contador;
     }
 
-    // Métodos adicionales
     public void guardarEnBD() {
         try {
             new TicketDAO().crearTicket(this);
         } catch (SQLException e) {
             e.printStackTrace();
-            // Maneja el error adecuadamente
+
         }
     }
 

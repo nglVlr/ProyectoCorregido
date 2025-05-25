@@ -18,6 +18,12 @@ public class Tecnico extends Usuario {
         System.out.println("Tecnico: " + getNombre() + ", Correo: " + getCorreo() + ", Rol: " + getRol());
     }
 
+    public String getDepartamento() {
+        return departamento;
+    }
+    public void setDepartamento(String departamento) {
+        this.departamento = departamento;
+    }
     public void atenderTicket(Ticket ticket) {
         System.out.println("Atendiendo ticket c:" + ticket.getId());
     }

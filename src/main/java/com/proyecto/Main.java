@@ -1,5 +1,4 @@
 package com.proyecto;
-
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
@@ -7,14 +6,14 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
-import javafx.beans.property.*;
-import java.sql.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Optional;
 
 public class Main extends Application {
-    // interfaz
+    // Componentes para Tickets
     private TableView<Ticket> ticketTable = new TableView<>();
     private TextField tituloField = new TextField();
     private TextArea descripcionArea = new TextArea();
@@ -23,16 +22,28 @@ public class Main extends Application {
     private ComboBox<Usuario> usuarioCombo = new ComboBox<>();
     private DatePicker fechaCreacionPicker = new DatePicker();
 
+    // Componentes para Usuarios
+    private TableView<Usuario> usuariosTable = new TableView<>();
+    private TextField nombreUsuarioField = new TextField();
+    private TextField correoField = new TextField();
+    private ComboBox<String> rolCombo = new ComboBox<>();
+    private TextField departamentoField = new TextField();
+
     // DAOs
     private TicketDAO ticketDAO;
     private UsuarioDAO usuarioDAO;
 
-    // Datos del sistema
+    // Roles y departamentos
     private Departamento departamentoIT = new Departamento("IT");
     private Roles rolAdmin = new Roles("Administrador");
     private Roles rolTecnico = new Roles("Técnico");
     private Roles rolUsuario = new Roles("Usuario");
     private Administrador admin = new Administrador("Admin Principal", "admin@empresa.com", rolAdmin);
+
+    // Pestañas
+    private TabPane tabPane = new TabPane();
+    private Tab tabTickets = new Tab("Gestión de Tickets");
+    private Tab tabUsuarios = new Tab("Gestión de Usuarios");
 
     public static void main(String[] args) {
         launch(args);
@@ -44,127 +55,14 @@ public class Main extends Application {
             ticketDAO = new TicketDAO();
             usuarioDAO = new UsuarioDAO();
 
-            // Configuración inicial de la ventana
-            primaryStage.setTitle("Sistema de Tickets - Administración");
-            primaryStage.setWidth(1100);
-            primaryStage.setHeight(750);
+            primaryStage.setTitle("Sistema Integrado de Tickets y Usuarios");
+            primaryStage.setWidth(1200);
+            primaryStage.setHeight(800);
 
-            // Crear datos de prueba
-            //crearDatosDemo();
+            crearDatosDemo();
+            configurarInterfaz();
 
-            // Layout principal
-            BorderPane root = new BorderPane();
-            root.setPadding(new Insets(20));
-            root.setStyle("-fx-background-color: #f5f5f5;");
-
-            // panel superior
-            Label tituloApp = new Label("Sistema de Gestión de Tickets");
-            tituloApp.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
-            BorderPane.setAlignment(tituloApp, javafx.geometry.Pos.CENTER);
-            root.setTop(tituloApp);
-
-            // panel central
-            configurarTablaTickets();
-            VBox tablaContainer = new VBox(ticketTable);
-            tablaContainer.setPadding(new Insets(10));
-            tablaContainer.setStyle("-fx-background-color: white; -fx-border-radius: 5; -fx-padding: 10;");
-            root.setCenter(tablaContainer);
-
-            // panel derecho (administracion)
-            VBox adminPanel = new VBox(10);
-            adminPanel.setPadding(new Insets(15));
-            adminPanel.setStyle("-fx-background-color: #ecf0f1; -fx-border-radius: 5; -fx-padding: 15;");
-
-            Button btnGestionarRoles = new Button("Gestionar Roles");
-            Button btnGestionarSistema = new Button("Gestionar Sistema");
-            Button btnEliminarUsuario = new Button("Eliminar Usuario");
-            Button btnReportes = new Button("Generar Reportes");
-
-            // botones de administración
-            String botonAdminStyle = "-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16;";
-            btnGestionarRoles.setStyle(botonAdminStyle);
-            btnGestionarSistema.setStyle(botonAdminStyle);
-            btnEliminarUsuario.setStyle(botonAdminStyle);
-            btnReportes.setStyle(botonAdminStyle);
-
-            adminPanel.getChildren().addAll(
-                    new Label("Opciones de Administración:"),
-                    btnGestionarRoles,
-                    btnGestionarSistema,
-                    btnEliminarUsuario,
-                    btnReportes
-            );
-            root.setRight(adminPanel);
-
-            // panel inferior (formulario)
-            GridPane formulario = new GridPane();
-            formulario.setHgap(10);
-            formulario.setVgap(10);
-            formulario.setPadding(new Insets(15));
-            formulario.setStyle("-fx-background-color: white; -fx-border-radius: 5; -fx-padding: 15;");
-
-            // Campos del formulario
-            formulario.add(new Label("Título:"), 0, 0);
-            formulario.add(tituloField, 1, 0);
-            formulario.add(new Label("Descripción:"), 0, 1);
-            formulario.add(descripcionArea, 1, 1);
-            formulario.add(new Label("Estado:"), 0, 2);
-            estadoCombo.setItems(FXCollections.observableArrayList("Abierto", "En Progreso", "Cerrado"));
-            formulario.add(estadoCombo, 1, 2);
-            formulario.add(new Label("Técnico:"), 0, 3);
-            tecnicoCombo.setItems(FXCollections.observableList(departamentoIT.buscarTecnicos()));
-            formulario.add(tecnicoCombo, 1, 3);
-            formulario.add(new Label("Solicitante:"), 0, 4);
-            usuarioCombo.setItems(FXCollections.observableArrayList(getUsuarios()));
-            formulario.add(usuarioCombo, 1, 4);
-            formulario.add(new Label("Fecha Creación:"), 0, 5);
-            fechaCreacionPicker.setValue(LocalDate.now());
-            formulario.add(fechaCreacionPicker, 1, 5);
-
-            // Botones CRUD
-            HBox botonesContainer = new HBox(10);
-            Button btnCrear = new Button("Crear Ticket");
-            Button btnActualizar = new Button("Actualizar");
-            Button btnEliminar = new Button("Eliminar");
-            Button btnAgregarNota = new Button("Agregar Nota");
-            Button btnLimpiar = new Button("Limpiar");
-
-            // Estilo botones
-            String botonStyle = "-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16;";
-            btnCrear.setStyle(botonStyle);
-            btnActualizar.setStyle(botonStyle + "-fx-background-color: #2ecc71;");
-            btnEliminar.setStyle(botonStyle + "-fx-background-color: #e74c3c;");
-            btnAgregarNota.setStyle(botonStyle + "-fx-background-color: #f39c12;");
-            btnLimpiar.setStyle(botonStyle + "-fx-background-color: #95a5a6;");
-
-            botonesContainer.getChildren().addAll(btnCrear, btnActualizar, btnEliminar, btnAgregarNota, btnLimpiar);
-            formulario.add(botonesContainer, 1, 6);
-
-            root.setBottom(formulario);
-
-            // eventos
-            btnCrear.setOnAction(e -> crearTicket());
-            btnActualizar.setOnAction(e -> actualizarTicket());
-            btnEliminar.setOnAction(e -> eliminarTicket());
-            btnAgregarNota.setOnAction(e -> agregarNota());
-            btnLimpiar.setOnAction(e -> limpiarCampos());
-            btnGestionarRoles.setOnAction(e -> gestionarRoles());
-            btnGestionarSistema.setOnAction(e -> gestionarSistema());
-            btnEliminarUsuario.setOnAction(e -> eliminarUsuario());
-            btnReportes.setOnAction(e -> generarReportes());
-
-            // seleccionar ticket de la tabla
-            ticketTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-                if (newSelection != null) {
-                    cargarDatosTicket(newSelection);
-                }
-            });
-
-            // Cargar datos iniciales
-            cargarTickets();
-
-            // Mostrar ventana
-            Scene scene = new Scene(root);
+            Scene scene = new Scene(tabPane);
             primaryStage.setScene(scene);
             primaryStage.show();
 
@@ -173,36 +71,203 @@ public class Main extends Application {
         }
     }
 
+    private void configurarInterfaz() {
+        configurarInterfazTickets();
+        configurarInterfazUsuarios();
+
+        tabPane.getTabs().addAll(tabTickets, tabUsuarios);
+        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+    }
+
+    private void configurarInterfazTickets() {
+        BorderPane root = new BorderPane();
+        root.setPadding(new Insets(20));
+        root.setStyle("-fx-background-color: #f5f5f5;");
+
+        Label tituloApp = new Label("Sistema de Gestión de Tickets");
+        tituloApp.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+        BorderPane.setAlignment(tituloApp, javafx.geometry.Pos.CENTER);
+        root.setTop(tituloApp);
+
+        configurarTablaTickets();
+        VBox tablaContainer = new VBox(ticketTable);
+        tablaContainer.setPadding(new Insets(10));
+        tablaContainer.setStyle("-fx-background-color: white; -fx-border-radius: 5; -fx-padding: 10;");
+        root.setCenter(tablaContainer);
+
+        VBox adminPanel = new VBox(10);
+        adminPanel.setPadding(new Insets(15));
+        adminPanel.setStyle("-fx-background-color: #ecf0f1; -fx-border-radius: 5; -fx-padding: 15;");
+
+        Button btnReportes = new Button("Generar Reportes");
+        btnReportes.setStyle("-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16;");
+        adminPanel.getChildren().addAll(new Label("Opciones:"), btnReportes);
+        root.setRight(adminPanel);
+
+        GridPane formulario = new GridPane();
+        formulario.setHgap(10);
+        formulario.setVgap(10);
+        formulario.setPadding(new Insets(15));
+        formulario.setStyle("-fx-background-color: white; -fx-border-radius: 5; -fx-padding: 15;");
+
+        formulario.add(new Label("Título:"), 0, 0);
+        formulario.add(tituloField, 1, 0);
+        formulario.add(new Label("Descripción:"), 0, 1);
+        descripcionArea.setPrefRowCount(3);
+        formulario.add(descripcionArea, 1, 1);
+        formulario.add(new Label("Estado:"), 0, 2);
+        estadoCombo.setItems(FXCollections.observableArrayList("Abierto", "En Progreso", "Cerrado"));
+        formulario.add(estadoCombo, 1, 2);
+        formulario.add(new Label("Técnico:"), 0, 3);
+        formulario.add(tecnicoCombo, 1, 3);
+        formulario.add(new Label("Solicitante:"), 0, 4);
+        formulario.add(usuarioCombo, 1, 4);
+        formulario.add(new Label("Fecha Creación:"), 0, 5);
+        fechaCreacionPicker.setValue(LocalDate.now());
+        formulario.add(fechaCreacionPicker, 1, 5);
+
+        HBox botonesContainer = new HBox(10);
+        Button btnCrear = new Button("Crear Ticket");
+        Button btnActualizar = new Button("Actualizar");
+        Button btnEliminar = new Button("Eliminar");
+        Button btnAgregarNota = new Button("Agregar Nota");
+        Button btnLimpiar = new Button("Limpiar");
+
+        String botonStyle = "-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16;";
+        btnCrear.setStyle(botonStyle);
+        btnActualizar.setStyle(botonStyle + "-fx-background-color: #2ecc71;");
+        btnEliminar.setStyle(botonStyle + "-fx-background-color: #e74c3c;");
+        btnAgregarNota.setStyle(botonStyle + "-fx-background-color: #f39c12;");
+        btnLimpiar.setStyle(botonStyle + "-fx-background-color: #95a5a6;");
+
+        botonesContainer.getChildren().addAll(btnCrear, btnActualizar, btnEliminar, btnAgregarNota, btnLimpiar);
+        formulario.add(botonesContainer, 1, 6);
+
+        root.setBottom(formulario);
+
+        btnCrear.setOnAction(e -> crearTicket());
+        btnActualizar.setOnAction(e -> actualizarTicket());
+        btnEliminar.setOnAction(e -> eliminarTicket());
+        btnAgregarNota.setOnAction(e -> agregarNota());
+        btnLimpiar.setOnAction(e -> limpiarCamposTicket());
+        btnReportes.setOnAction(e -> generarReportes());
+
+        ticketTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                cargarDatosTicket(newSelection);
+            }
+        });
+
+        cargarTickets();
+        cargarUsuarios();
+        cargarTecnicos();
+
+        tabTickets.setContent(root);
+    }
+
+    private void configurarInterfazUsuarios() {
+        BorderPane root = new BorderPane();
+        root.setPadding(new Insets(20));
+        root.setStyle("-fx-background-color: #f5f5f5;");
+
+        Label titulo = new Label("Gestión de Usuarios del Sistema");
+        titulo.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+        BorderPane.setAlignment(titulo, javafx.geometry.Pos.CENTER);
+        root.setTop(titulo);
+
+        configurarTablaUsuarios();
+        VBox tablaContainer = new VBox(usuariosTable);
+        tablaContainer.setPadding(new Insets(10));
+        tablaContainer.setStyle("-fx-background-color: white; -fx-border-radius: 5; -fx-padding: 10;");
+        root.setCenter(tablaContainer);
+
+        GridPane formulario = new GridPane();
+        formulario.setHgap(10);
+        formulario.setVgap(15);
+        formulario.setPadding(new Insets(15));
+        formulario.setStyle("-fx-background-color: white; -fx-border-radius: 5; -fx-padding: 15;");
+
+        Label lblFormulario = new Label("Crear/Editar Usuario");
+        lblFormulario.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #34495e;");
+        formulario.add(lblFormulario, 0, 0, 2, 1);
+
+        formulario.add(new Label("Nombre:"), 0, 1);
+        nombreUsuarioField.setPromptText("Ingrese el nombre completo");
+        formulario.add(nombreUsuarioField, 1, 1);
+
+        formulario.add(new Label("Correo:"), 0, 2);
+        correoField.setPromptText("usuario@empresa.com");
+        formulario.add(correoField, 1, 2);
+
+        formulario.add(new Label("Rol:"), 0, 3);
+        rolCombo.setItems(FXCollections.observableArrayList("Usuario", "Técnico", "Administrador"));
+        rolCombo.setPromptText("Seleccione un rol");
+        formulario.add(rolCombo, 1, 3);
+
+        formulario.add(new Label("Departamento:"), 0, 4);
+        departamentoField.setPromptText("Solo para técnicos (opcional)");
+        departamentoField.setDisable(true);
+        formulario.add(departamentoField, 1, 4);
+
+        HBox botonesContainer = new HBox(10);
+        Button btnCrear = new Button("Crear Usuario");
+        Button btnActualizar = new Button("Actualizar Usuario");
+        Button btnEliminar = new Button("Eliminar Usuario");
+        Button btnLimpiar = new Button("Limpiar Campos");
+
+        btnCrear.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20;");
+        btnActualizar.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20;");
+        btnEliminar.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20;");
+        btnLimpiar.setStyle("-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20;");
+
+        botonesContainer.getChildren().addAll(btnCrear, btnActualizar, btnEliminar, btnLimpiar);
+        formulario.add(botonesContainer, 1, 5);
+
+        root.setBottom(formulario);
+
+        btnCrear.setOnAction(e -> crearUsuario());
+        btnActualizar.setOnAction(e -> actualizarUsuario());
+        btnEliminar.setOnAction(e -> eliminarUsuario());
+        btnLimpiar.setOnAction(e -> limpiarCamposUsuario());
+
+        rolCombo.setOnAction(e -> {
+            if ("Técnico".equals(rolCombo.getValue())) {
+                departamentoField.setDisable(false);
+            } else {
+                departamentoField.setDisable(true);
+                departamentoField.clear();
+            }
+        });
+
+        usuariosTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                cargarDatosUsuario(newSelection);
+            }
+        });
+
+        cargarUsuariosParaTabla();
+
+        tabUsuarios.setContent(root);
+    }
+
     private void crearDatosDemo() {
         try {
-            // Crear técnicos de prueba
+            admin.setId(1);
+            usuarioDAO.crearUsuario(admin);
+
             Tecnico tecnico1 = new Tecnico("Juan Pérez", "juan@empresa.com", rolTecnico);
             Tecnico tecnico2 = new Tecnico("María García", "maria@empresa.com", rolTecnico);
+            usuarioDAO.crearUsuario(tecnico1);
+            usuarioDAO.crearUsuario(tecnico2);
             departamentoIT.asignarTecnico(tecnico1);
             departamentoIT.asignarTecnico(tecnico2);
 
-            // Crear usuarios de prueba
-            Usuario usuario1 = new Usuario("Carlos López", "carlos@empresa.com", rolUsuario) {
-                @Override
-                public void mostrarInfo() {
-                    System.out.println("Usuario normal: " + getNombre());
-                }
-            };
-            Usuario usuario2 = new Usuario("Ana Martínez", "ana@empresa.com", rolUsuario) {
-                @Override
-                public void mostrarInfo() {
-                    System.out.println("Usuario normal: " + getNombre());
-                }
-            };
+            Usuario usuario1 = new Usuario("Carlos López", "carlos@empresa.com", rolUsuario);
+            Usuario usuario2 = new Usuario("Ana Martínez", "ana@empresa.com", rolUsuario);
 
-            // Guardar en base de datos
-            usuarioDAO.crearUsuario(admin);
-            usuarioDAO.crearUsuario(tecnico1);
-            usuarioDAO.crearUsuario(tecnico2);
             usuarioDAO.crearUsuario(usuario1);
             usuarioDAO.crearUsuario(usuario2);
 
-            // Crear tickets de prueba
             Ticket ticket1 = new Ticket("Error en sistema", "No puedo acceder al sistema", usuario1, tecnico1);
             Ticket ticket2 = new Ticket("Solicitud de software", "Necesito instalar Photoshop", usuario2, tecnico2);
 
@@ -210,28 +275,28 @@ public class Main extends Application {
             ticketDAO.crearTicket(ticket2);
 
         } catch (SQLException e) {
-            mostrarAlerta("Error", "No se pudieron crear los datos de prueba: " + e.getMessage());
+            System.out.println("Error al crear datos demo: " + e.getMessage());
         }
     }
 
     private void configurarTablaTickets() {
         TableColumn<Ticket, Integer> idCol = new TableColumn<>("ID");
-        idCol.setCellValueFactory(cellData -> new SimpleIntegerProperty(cellData.getValue().getId()).asObject());
+        idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
 
         TableColumn<Ticket, String> tituloCol = new TableColumn<>("Título");
-        tituloCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getTitulo()));
+        tituloCol.setCellValueFactory(new PropertyValueFactory<>("titulo"));
 
         TableColumn<Ticket, String> estadoCol = new TableColumn<>("Estado");
-        estadoCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getEstado().getNombre()));
+        estadoCol.setCellValueFactory(new PropertyValueFactory<>("estado"));
 
         TableColumn<Ticket, String> tecnicoCol = new TableColumn<>("Técnico");
-        tecnicoCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getAsignado().getNombre()));
+        tecnicoCol.setCellValueFactory(new PropertyValueFactory<>("asignado"));
 
         TableColumn<Ticket, String> solicitanteCol = new TableColumn<>("Solicitante");
-        solicitanteCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getSolicitante().getNombre()));
+        solicitanteCol.setCellValueFactory(new PropertyValueFactory<>("solicitante"));
 
         TableColumn<Ticket, String> fechaCol = new TableColumn<>("Fecha Creación");
-        fechaCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getFechaCreacion().toString()));
+        fechaCol.setCellValueFactory(new PropertyValueFactory<>("fechaCreacion"));
 
         ticketTable.getColumns().addAll(idCol, tituloCol, estadoCol, tecnicoCol, solicitanteCol, fechaCol);
         ticketTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -247,12 +312,21 @@ public class Main extends Application {
         }
     }
 
-    private List<Usuario> getUsuarios() {
+    private void cargarUsuarios() {
         try {
-            return usuarioDAO.listarTodos();
+            List<Usuario> usuarios = usuarioDAO.listarTodos();
+            usuarioCombo.setItems(FXCollections.observableArrayList(usuarios));
         } catch (SQLException e) {
             mostrarAlerta("Error", "No se pudieron cargar los usuarios: " + e.getMessage());
-            return new ArrayList<>();
+        }
+    }
+
+    private void cargarTecnicos() {
+        try {
+            List<Tecnico> tecnicos = usuarioDAO.listarTecnicos();
+            tecnicoCombo.setItems(FXCollections.observableArrayList(tecnicos));
+        } catch (SQLException e) {
+            mostrarAlerta("Error", "No se pudieron cargar los técnicos: " + e.getMessage());
         }
     }
 
@@ -267,21 +341,20 @@ public class Main extends Application {
 
     private void crearTicket() {
         try {
-            if (validarCampos()) {
+            if (validarCamposTicket()) {
                 Ticket nuevoTicket = new Ticket(
                         tituloField.getText(),
                         descripcionArea.getText(),
                         usuarioCombo.getValue(),
                         tecnicoCombo.getValue()
                 );
-
                 nuevoTicket.getEstado().cambiarEstado(estadoCombo.getValue());
                 nuevoTicket.setFechaCreacion(fechaCreacionPicker.getValue());
 
                 ticketDAO.crearTicket(nuevoTicket);
-                ticketTable.getItems().add(nuevoTicket);
-                limpiarCampos();
-                mostrarAlerta("Exito", "Ticket creado correctamente");
+                cargarTickets();
+                limpiarCamposTicket();
+                mostrarAlerta("Éxito", "Ticket creado correctamente");
             }
         } catch (Exception e) {
             mostrarAlerta("Error", "No se pudo crear el ticket: " + e.getMessage());
@@ -292,7 +365,7 @@ public class Main extends Application {
         Ticket seleccionado = ticketTable.getSelectionModel().getSelectedItem();
         if (seleccionado != null) {
             try {
-                if (validarCampos()) {
+                if (validarCamposTicket()) {
                     seleccionado.setTitulo(tituloField.getText());
                     seleccionado.setDescripcion(descripcionArea.getText());
                     seleccionado.getEstado().cambiarEstado(estadoCombo.getValue());
@@ -301,8 +374,8 @@ public class Main extends Application {
                     seleccionado.setFechaCreacion(fechaCreacionPicker.getValue());
 
                     ticketDAO.actualizarTicket(seleccionado);
-                    ticketTable.refresh();
-                    mostrarAlerta("Exito", "Ticket actualizado correctamente");
+                    cargarTickets();
+                    mostrarAlerta("Éxito", "Ticket actualizado correctamente");
                 }
             } catch (Exception e) {
                 mostrarAlerta("Error", "No se pudo actualizar el ticket: " + e.getMessage());
@@ -316,7 +389,7 @@ public class Main extends Application {
         Ticket seleccionado = ticketTable.getSelectionModel().getSelectedItem();
         if (seleccionado != null) {
             Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
-            confirmacion.setTitle("Confirmar eliminacion");
+            confirmacion.setTitle("Confirmar eliminación");
             confirmacion.setHeaderText("¿Estás seguro de eliminar este ticket?");
             confirmacion.setContentText("Esta acción no se puede deshacer");
 
@@ -324,8 +397,9 @@ public class Main extends Application {
             if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
                 try {
                     ticketDAO.eliminarTicket(seleccionado.getId());
-                    ticketTable.getItems().remove(seleccionado);
-                    mostrarAlerta("exito", "Ticket eliminado correctamente");
+                    cargarTickets();
+                    limpiarCamposTicket();
+                    mostrarAlerta("Éxito", "Ticket eliminado correctamente");
                 } catch (Exception e) {
                     mostrarAlerta("Error", "No se pudo eliminar el ticket: " + e.getMessage());
                 }
@@ -344,14 +418,14 @@ public class Main extends Application {
             dialog.setContentText("Nota:");
 
             Optional<String> resultado = dialog.showAndWait();
-            resultado.ifPresent(nota -> {
+            if (resultado.isPresent()) {
                 try {
-                    ticketDAO.agregarNota(seleccionado.getId(), new Nota(nota));
+                    ticketDAO.agregarNota(seleccionado.getId(), new Nota(resultado.get()));
                     mostrarAlerta("Éxito", "Nota agregada correctamente");
                 } catch (SQLException e) {
                     mostrarAlerta("Error", "No se pudo agregar la nota: " + e.getMessage());
                 }
-            });
+            }
         } else {
             mostrarAlerta("Error", "Selecciona un ticket para agregar una nota");
         }
@@ -359,48 +433,40 @@ public class Main extends Application {
 
     private void generarReportes() {
         try {
-            List<Ticket> tickets = ticketTable.getItems();
+            List<Ticket> tickets = ticketDAO.obtenerTodos();
+            StringBuilder reporte = new StringBuilder();
 
-            long abiertos = tickets.stream()
-                    .filter(t -> t.getEstado().getNombre().equals("Abierto"))
-                    .count();
+            reporte.append("=== REPORTE DE TICKETS ===\n\n");
+            reporte.append("Total tickets: ").append(tickets.size()).append("\n");
 
-            long enProgreso = tickets.stream()
-                    .filter(t -> t.getEstado().getNombre().equals("En Progreso"))
-                    .count();
+            int abiertos = 0, enProgreso = 0, cerrados = 0;
+            for (Ticket ticket : tickets) {
+                switch(ticket.getEstado().getNombre()) {
+                    case "Abierto": abiertos++; break;
+                    case "En Progreso": enProgreso++; break;
+                    case "Cerrado": cerrados++; break;
+                }
+            }
 
-            long cerrados = tickets.stream()
-                    .filter(t -> t.getEstado().getNombre().equals("Cerrado"))
-                    .count();
+            reporte.append("Abiertos: ").append(abiertos).append("\n");
+            reporte.append("En progreso: ").append(enProgreso).append("\n");
+            reporte.append("Cerrados: ").append(cerrados).append("\n");
 
-            String reporte = "Reporte de Tickets:\n\n" +
-                    "Total tickets: " + tickets.size() + "\n" +
-                    "Abiertos: " + abiertos + "\n" +
-                    "En progreso: " + enProgreso + "\n" +
-                    "Cerrados: " + cerrados;
+            TextArea area = new TextArea(reporte.toString());
+            area.setEditable(false);
 
-            mostrarAlerta("Reporte", reporte);
-        } catch (Exception e) {
-            mostrarAlerta("Error", "No se pudo generar el reporte: " + e.getMessage());
+            Alert dialog = new Alert(Alert.AlertType.INFORMATION);
+            dialog.setTitle("Reporte de Tickets");
+            dialog.setHeaderText("Estadísticas del sistema");
+            dialog.getDialogPane().setContent(area);
+            dialog.getDialogPane().setPrefSize(400, 300);
+            dialog.showAndWait();
+        } catch (SQLException e) {
+            mostrarAlerta("Error", "Error al generar reporte: " + e.getMessage());
         }
     }
 
-    private void gestionarRoles() {
-        // Implementación de gestión de roles
-        mostrarAlerta("En desarrollo", "Función de gestión de roles en desarrollo");
-    }
-
-    private void gestionarSistema() {
-        // Implementación de gestión del sistema
-        mostrarAlerta("En desarrollo", "Función de gestión del sistema en desarrollo");
-    }
-
-    private void eliminarUsuario() {
-        // Implementación de eliminación de usuario
-        mostrarAlerta("En desarrollo", "Función de eliminar usuario en desarrollo");
-    }
-
-    private boolean validarCampos() {
+    private boolean validarCamposTicket() {
         if (tituloField.getText().isEmpty()) {
             mostrarAlerta("Error", "El título es obligatorio");
             return false;
@@ -424,7 +490,7 @@ public class Main extends Application {
         return true;
     }
 
-    private void limpiarCampos() {
+    private void limpiarCamposTicket() {
         tituloField.clear();
         descripcionArea.clear();
         estadoCombo.getSelectionModel().clearSelection();
@@ -432,6 +498,183 @@ public class Main extends Application {
         usuarioCombo.getSelectionModel().clearSelection();
         fechaCreacionPicker.setValue(LocalDate.now());
         ticketTable.getSelectionModel().clearSelection();
+    }
+
+    private void configurarTablaUsuarios() {
+        TableColumn<Usuario, Integer> idCol = new TableColumn<>("ID");
+        idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
+
+        TableColumn<Usuario, String> nombreCol = new TableColumn<>("Nombre");
+        nombreCol.setCellValueFactory(new PropertyValueFactory<>("nombre"));
+
+        TableColumn<Usuario, String> correoCol = new TableColumn<>("Correo");
+        correoCol.setCellValueFactory(new PropertyValueFactory<>("correo"));
+
+        TableColumn<Usuario, String> rolCol = new TableColumn<>("Rol");
+        rolCol.setCellValueFactory(new PropertyValueFactory<>("rol"));
+
+        usuariosTable.getColumns().addAll(idCol, nombreCol, correoCol, rolCol);
+        usuariosTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+    }
+
+    private void cargarUsuariosParaTabla() {
+        try {
+            usuariosTable.getItems().clear();
+            List<Usuario> usuarios = usuarioDAO.listarTodos();
+            usuariosTable.getItems().addAll(usuarios);
+        } catch (SQLException e) {
+            mostrarAlerta("Error", "No se pudieron cargar los usuarios: " + e.getMessage());
+        }
+    }
+
+    private void cargarDatosUsuario(Usuario usuario) {
+        nombreUsuarioField.setText(usuario.getNombre());
+        correoField.setText(usuario.getCorreo());
+        rolCombo.setValue(usuario.getRol().getNombre());
+
+        if (usuario instanceof Tecnico) {
+            departamentoField.setDisable(false);
+            departamentoField.setText(((Tecnico)usuario).getDepartamento());
+        } else {
+            departamentoField.setDisable(true);
+            departamentoField.clear();
+        }
+    }
+
+    private void crearUsuario() {
+        try {
+            if (validarCamposUsuario()) {
+                String nombre = nombreUsuarioField.getText().trim();
+                String correo = correoField.getText().trim();
+                String rolSeleccionado = rolCombo.getValue();
+                String departamento = departamentoField.getText().trim();
+
+                Roles rol = obtenerRol(rolSeleccionado);
+                Usuario nuevoUsuario;
+
+                switch(rolSeleccionado) {
+                    case "Administrador":
+                        nuevoUsuario = new Administrador(nombre, correo, rol);
+                        break;
+                    case "Técnico":
+                        if (departamento.isEmpty()) {
+                            nuevoUsuario = new Tecnico(nombre, correo, rol);
+                        } else {
+                            nuevoUsuario = new Tecnico(nombre, correo, rol, departamento);
+                        }
+                        break;
+                    default:
+                        nuevoUsuario = new Usuario(nombre, correo, rol);
+                }
+
+                usuarioDAO.crearUsuario(nuevoUsuario);
+                cargarUsuariosParaTabla();
+                cargarUsuarios();
+                cargarTecnicos();
+                limpiarCamposUsuario();
+                mostrarAlerta("Éxito", "Usuario creado correctamente: " + nombre);
+            }
+        } catch (Exception e) {
+            mostrarAlerta("Error", "No se pudo crear el usuario: " + e.getMessage());
+        }
+    }
+
+    private void actualizarUsuario() {
+        Usuario seleccionado = usuariosTable.getSelectionModel().getSelectedItem();
+        if (seleccionado != null) {
+            try {
+                if (validarCamposUsuario()) {
+                    seleccionado.setNombre(nombreUsuarioField.getText().trim());
+                    seleccionado.setCorreo(correoField.getText().trim());
+                    seleccionado.setRol(obtenerRol(rolCombo.getValue()));
+
+                    if (seleccionado instanceof Tecnico) {
+                        ((Tecnico)seleccionado).setDepartamento(departamentoField.getText().trim());
+                    }
+
+                    usuarioDAO.actualizarUsuario(seleccionado);
+                    cargarUsuariosParaTabla();
+                    cargarUsuarios();
+                    cargarTecnicos();
+                    mostrarAlerta("Éxito", "Usuario actualizado correctamente");
+                }
+            } catch (Exception e) {
+                mostrarAlerta("Éxito", "Usuario actualizado correctamente");
+            }
+        } else {
+            mostrarAlerta("Error", "Selecciona un usuario para actualizar");
+        }
+    }
+
+    private void eliminarUsuario() {
+        Usuario seleccionado = usuariosTable.getSelectionModel().getSelectedItem();
+        if (seleccionado != null) {
+            if (seleccionado.getRol().getNombre().equals("Administrador")) {
+                mostrarAlerta("Error", "No se puede eliminar un administrador");
+                return;
+            }
+
+            Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
+            confirmacion.setTitle("Confirmar eliminación");
+            confirmacion.setHeaderText("¿Estás seguro de eliminar este usuario?");
+            confirmacion.setContentText("Usuario: " + seleccionado.getNombre() + "\nEsta acción no se puede deshacer");
+
+            Optional<ButtonType> resultado = confirmacion.showAndWait();
+            if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
+                try {
+                    usuarioDAO.eliminarUsuario(seleccionado.getId());
+                    cargarUsuariosParaTabla();
+                    cargarUsuarios();
+                    cargarTecnicos();
+                    limpiarCamposUsuario();
+                    mostrarAlerta("Éxito", "Usuario eliminado correctamente");
+                } catch (Exception e) {
+                    mostrarAlerta("Error", "No se pudo eliminar el usuario: " + e.getMessage());
+                }
+            }
+        } else {
+            mostrarAlerta("Error", "Selecciona un usuario para eliminar");
+        }
+    }
+
+    private Roles obtenerRol(String nombreRol) {
+        switch(nombreRol) {
+            case "Administrador":
+                return rolAdmin;
+            case "Técnico":
+                return rolTecnico;
+            default:
+                return rolUsuario;
+        }
+    }
+
+    private boolean validarCamposUsuario() {
+        if (nombreUsuarioField.getText().trim().isEmpty()) {
+            mostrarAlerta("Error", "El nombre es obligatorio");
+            return false;
+        }
+        if (correoField.getText().trim().isEmpty()) {
+            mostrarAlerta("Error", "El correo es obligatorio");
+            return false;
+        }
+        if (!correoField.getText().contains("@")) {
+            mostrarAlerta("Error", "El correo debe tener un formato válido");
+            return false;
+        }
+        if (rolCombo.getValue() == null) {
+            mostrarAlerta("Error", "Debes seleccionar un rol");
+            return false;
+        }
+        return true;
+    }
+
+    private void limpiarCamposUsuario() {
+        nombreUsuarioField.clear();
+        correoField.clear();
+        rolCombo.getSelectionModel().clearSelection();
+        departamentoField.clear();
+        departamentoField.setDisable(true);
+        usuariosTable.getSelectionModel().clearSelection();
     }
 
     private void mostrarAlerta(String titulo, String mensaje) {
