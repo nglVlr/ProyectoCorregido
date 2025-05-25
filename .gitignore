@@ -1,0 +1,61 @@
+<<<<<<< HEAD
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### IntelliJ IDEA ###
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/libraries/
+*.iws
+*.iml
+*.ipr
+=======
+### IntelliJ IDEA ###
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+>>>>>>> 75e36417813423ea4603a4b98b100b039d516d7c
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+<<<<<<< HEAD
+=======
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+>>>>>>> 75e36417813423ea4603a4b98b100b039d516d7c
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+<<<<<<< HEAD
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+=======
+>>>>>>> 75e36417813423ea4603a4b98b100b039d516d7c
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+<<<<<<< HEAD
+.DS_Store
+=======
+.DS_Store
+.idea/
+*.iml
+*.class
+>>>>>>> 75e36417813423ea4603a4b98b100b039d516d7c
